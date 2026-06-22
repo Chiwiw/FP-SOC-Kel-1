@@ -1,0 +1,24 @@
+# Gitignore for FP-SOC project
+# Python virtual environment
+.venv/
+venv/
+# Byte‑code caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+# Distribution / packaging
+*.egg-info/
+*.dist-info/
+# Data files (do not track large datasets)
+/dataset/*.csv
+/dataset/*.json
+# Environment variable files
+.env
+*.env
+# IDE / editor settings
+.vscode/
+.idea/
+# OS generated files
+.DS_Store
+Thumbs.db
