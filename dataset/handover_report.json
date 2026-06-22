@@ -1,0 +1,23 @@
+{
+  "ddos": {
+    "total": 6276,
+    "tp": 689,
+    "fp": 5587,
+    "tp_percent": 10.98,
+    "fp_percent": 89.02
+  },
+  "malware": {
+    "total": 8531,
+    "tp": 8,
+    "fp": 8523,
+    "tp_percent": 0.09,
+    "fp_percent": 99.91
+  },
+  "socialeng": {
+    "total": 9347,
+    "tp": 3,
+    "fp": 9344,
+    "tp_percent": 0.03,
+    "fp_percent": 99.97
+  }
+}

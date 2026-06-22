@@ -10,9 +10,7 @@ __pycache__/
 # Distribution / packaging
 *.egg-info/
 *.dist-info/
-# Data files (do not track large datasets)
-/dataset/*.csv
-/dataset/*.json
+# Data files (included in repository)
 # Environment variable files
 .env
 *.env
