@@ -1,0 +1,166 @@
+{
+  "top_negative_features": [
+    {
+      "feature": "categorical__syscheck.event_missing",
+      "weight": -1.6728123874911083
+    },
+    {
+      "feature": "categorical__path_kind_missing",
+      "weight": -1.6728123874911083
+    },
+    {
+      "feature": "groups__syslog",
+      "weight": -1.6702945270635428
+    },
+    {
+      "feature": "categorical__rule.id_100002",
+      "weight": -1.5618426343579699
+    },
+    {
+      "feature": "groups__ddosnodejs",
+      "weight": -1.5618426343579699
+    },
+    {
+      "feature": "groups__http",
+      "weight": -1.5618426343579699
+    },
+    {
+      "feature": "categorical__agent.name_wazuh-manager",
+      "weight": -1.385003247907025
+    },
+    {
+      "feature": "groups__authentication_failures",
+      "weight": -0.921068791691858
+    },
+    {
+      "feature": "numeric__has_pam_keyword",
+      "weight": -0.8450531675115082
+    },
+    {
+      "feature": "categorical__srcip_unknown",
+      "weight": -0.7826012887846532
+    },
+    {
+      "feature": "numeric__minute_of_hour",
+      "weight": -0.7746184563605925
+    },
+    {
+      "feature": "categorical__decoder.name_sshd",
+      "weight": -0.7703850858372089
+    },
+    {
+      "feature": "categorical__agent.name_wazuh-agent-victim",
+      "weight": -0.6897487333427396
+    },
+    {
+      "feature": "categorical__decoder.name_pam",
+      "weight": -0.6664400446801935
+    },
+    {
+      "feature": "groups__pam",
+      "weight": -0.6662477863247359
+    },
+    {
+      "feature": "categorical__rule.id_5712",
+      "weight": -0.6233905988801001
+    },
+    {
+      "feature": "groups__sshd",
+      "weight": -0.5981364200965034
+    },
+    {
+      "feature": "numeric__group_count",
+      "weight": -0.5671042069845661
+    },
+    {
+      "feature": "groups__authentication_failed",
+      "weight": -0.5184961335647554
+    },
+    {
+      "feature": "categorical__srcip_45.156.87.117",
+      "weight": -0.49246445267673067
+    }
+  ],
+  "top_positive_features": [
+    {
+      "feature": "groups__http_flood",
+      "weight": 1.643198520927225
+    },
+    {
+      "feature": "groups__ddosddos",
+      "weight": 1.643198520927225
+    },
+    {
+      "feature": "categorical__rule.id_100003",
+      "weight": 1.641958475457155
+    },
+    {
+      "feature": "numeric__rule.level",
+      "weight": 1.5072993875016394
+    },
+    {
+      "feature": "numeric__has_http_keyword",
+      "weight": 0.9642537928385302
+    },
+    {
+      "feature": "numeric__has_json_keyword",
+      "weight": 0.9635487504736372
+    },
+    {
+      "feature": "categorical__srcip_103.94.191.161",
+      "weight": 0.818481377364257
+    },
+    {
+      "feature": "numeric__hour_of_day",
+      "weight": 0.5837808473708457
+    },
+    {
+      "feature": "categorical__rule.id_5715",
+      "weight": 0.479652068851429
+    },
+    {
+      "feature": "numeric__has_success_keyword",
+      "weight": 0.4677731521546377
+    },
+    {
+      "feature": "categorical__agent.name_attack-agent",
+      "weight": 0.4649467867713857
+    },
+    {
+      "feature": "numeric__srcip_frequency",
+      "weight": 0.4224346932091629
+    },
+    {
+      "feature": "numeric__has_ssh_keyword",
+      "weight": 0.38125751820226894
+    },
+    {
+      "feature": "numeric__day_of_year",
+      "weight": 0.14058251895826207
+    },
+    {
+      "feature": "categorical__srcip_20.6.131.20",
+      "weight": 0.08139020652125119
+    },
+    {
+      "feature": "groups__nodejs",
+      "weight": 0.08135588656925424
+    },
+    {
+      "feature": "categorical__decoder.name_json",
+      "weight": 0.08135588656925424
+    },
+    {
+      "feature": "groups__web",
+      "weight": 0.08135588656925423
+    },
+    {
+      "feature": "groups__malware",
+      "weight": 0.053761598934323404
+    },
+    {
+      "feature": "groups__local",
+      "weight": 0.053761598934323404
+    }
+  ]
+}

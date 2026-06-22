@@ -1,0 +1,25 @@
+{
+  "accuracy": 0.9997930035189402,
+  "precision": 0.9929078014184397,
+  "recall": 1.0,
+  "f1": 0.99644128113879,
+  "confusion_matrix": [
+    [
+      4690,
+      1
+    ],
+    [
+      0,
+      140
+    ]
+  ],
+  "train_rows": 19323,
+  "test_rows": 4831,
+  "positive_train": 560,
+  "positive_test": 140,
+  "negative_train": 18763,
+  "negative_test": 4691,
+  "model_path": "/mnt/d/ngoding/soc/final-project/FP-SOC-Kel-1/ai-model/artifacts/alert_tp_fp_model.joblib",
+  "data_path": "dataset/final_dataset.csv",
+  "scenario_filter": null
+}
