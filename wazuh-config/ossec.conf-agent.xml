@@ -1,0 +1,21 @@
+<!-- wazuh-config/ossec.conf-agent.xml -->
+<!-- Bagian syscheck + localfile dari webapp agent -->
+<ossec_config>
+  <!-- Konfigurasi Syscheck (File Integrity Monitoring) untuk Webapp -->
+  <syscheck>
+    <disabled>no</disabled>
+    <frequency>43200</frequency>
+    <!-- Ganti direktori di bawah dengan path absolut direktori webapp Anda -->
+    <directories check_all="yes" realtime="yes" report_changes="yes">/var/www/html/webapp</directories>
+    
+    <!-- Abaikan direktori temporary atau cache yang sering berubah jika diperlukan -->
+    <!-- <ignore>/var/www/html/webapp/cache</ignore> -->
+  </syscheck>
+
+  <!-- Konfigurasi Localfile untuk memonitor log webapp -->
+  <localfile>
+    <log_format>syslog</log_format>
+    <!-- Ganti dengan path file log webapp Anda -->
+    <location>/var/log/nginx/webapp_access.log</location>
+  </localfile>
+</ossec_config>

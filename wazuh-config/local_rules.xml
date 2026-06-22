@@ -1,0 +1,5 @@
+<!-- wazuh-config/local_rules.xml -->
+<!-- Copy dari Manager -->
+<group name="local,syslog,sshd,">
+  <!-- Tambahkan rule custom Anda di sini -->
+</group>
