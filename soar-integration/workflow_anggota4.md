@@ -1,74 +1,79 @@
-# ANGGOTA 4
+# PERBAIKAN DAN PENAMBAHAN DOKUMENTASI ANGGOTA 4
 
-# SOAR Integration, AI Pipeline, Playbook Response, dan Benchmarking
+## Struktur Final VM
 
-## Project
+### VM-1 : wazuh-manager
 
-Reducing SOC False Alarms Through Human-AI Collaboration
+IP:
 
----
+```text
+20.198.176.191
+```
 
-# 1. Tujuan Anggota 4
-
-Mengintegrasikan model Machine Learning hasil pekerjaan Anggota 3 ke dalam sistem SOAR sehingga:
-
-1. Alert Wazuh dianalisis terlebih dahulu oleh AI.
-2. Alert dengan probabilitas True Positive tinggi diteruskan ke workflow respons.
-3. Alert dengan probabilitas False Positive tinggi diturunkan prioritasnya.
-4. Workflow respons dapat berjalan otomatis.
-5. Performa sebelum dan sesudah AI dapat dibandingkan.
-
----
-
-# 2. Infrastruktur
-
-## VM-1 : wazuh-manager
-
-Fungsi:
+Service:
 
 ```text
 Wazuh Manager
 Wazuh Dashboard
 Wazuh API
-```
-
-Tambahan yang akan dipasang:
-
-```text
 Shuffle SOAR
-AI Scoring Service
+AI Scoring API
 ```
 
-Direktori kerja:
+Folder:
 
 ```text
 /home/azureuser/soc-project
+
+├── ai-model
+│   ├── artifacts
+│   ├── src
+│   ├── score_alert.py
+│   └── app.py
+│
+├── soar
+│   └── Shuffle
+│
+└── benchmark
 ```
 
 ---
 
-## VM-2 : wazuh-agent-fe
+### VM-2 : wazuh-agent-fe
 
-Fungsi:
+IP:
+
+```text
+20.255.63.52
+```
+
+Service:
 
 ```text
 Frontend Application
 Wazuh Agent
+Playbook Executor
 ```
 
-Target:
+Folder:
 
 ```text
-DDoS
-Malware
-Login Abuse
+/home/azureuser/playbooks
+
+└── playbook_actions.sh
 ```
 
 ---
 
-## VM-3 : wazuh-agent-attacker
+### VM-3 : wazuh-agent-attacker
 
-Fungsi:
+IP:
+
+```text
+20.6.131.20
+```
+
+Service:
 
 ```text
 Attack Simulation
@@ -84,63 +89,193 @@ GoPhish
 
 ---
 
-# 3. File yang Diterima dari Anggota 3
+# PERSIAPAN PORT
 
-## Artifact
-
-```text
-ai-model/artifacts/
-
-├── alert_tp_fp_model.joblib
-├── metrics.json
-└── top_features.json
-```
-
-## Script
-
-```text
-ai-model/
-
-├── score_alert.py
-├── train_model.py
-└── src/
-```
-
----
-
-# 4. Struktur Folder Anggota 4
-
-Di VM Manager:
-
-```text
-/home/azureuser/soc-project
-
-├── ai-model
-│
-│   ├── artifacts
-│   │
-│   │   ├── alert_tp_fp_model.joblib
-│   │   ├── metrics.json
-│   │   └── top_features.json
-│   │
-│   ├── score_alert.py
-│   ├── app.py
-│   └── requirements.txt
-│
-├── soar
-│   └── Shuffle
-│
-└── benchmark
-```
-
----
-
-# 5. Setup Shuffle SOAR
-
-## Login ke VM Manager
+Sebelum install Shuffle dan AI API:
 
 ```bash
-ssh azureuser@IP_MANAGER
+sudo ss -tulpn
+```
+
+Catat port yang sudah digunakan.
+
+Biasanya:
+
+```text
+443     Wazuh Dashboard
+55000   Wazuh API
+```
+
+Pastikan:
+
+```text
+5000
+3001
+```
+
+belum digunakan.
+
+---
+
+# DEPLOY AI SCORING API
+
+Masuk ke VM Manager:
+
+```bash
+ssh azureuser@20.198.176.191
+```
+
+---
+
+## Membuat Folder AI
+
+```bash
+mkdir -p ~/soc-project/ai-model
+```
+
+---
+
+## Upload Artifact
+
+Dari laptop:
+
+```bash
+scp -r ai-model \
+azureuser@20.198.176.191:/home/azureuser/soc-project/
+```
+
+Verifikasi:
+
+```bash
+ls ~/soc-project/ai-model/artifacts
+```
+
+Harus muncul:
+
+```text
+alert_tp_fp_model.joblib
+metrics.json
+top_features.json
+```
+
+---
+
+## Install Dependency
+
+```bash
+sudo apt update
+
+sudo apt install python3-pip -y
+
+pip3 install flask pandas scikit-learn joblib
+```
+
+---
+
+## Menjalankan API
+
+```bash
+cd ~/soc-project/ai-model
+
+python3 app.py
+```
+
+Output:
+
+```text
+Running on http://0.0.0.0:5000
+```
+
+---
+
+## Test API
+
+Health Check:
+
+```bash
+curl http://localhost:5000/health
+```
+
+Expected:
+
+```json
+{
+  "status":"ok"
+}
+```
+
+---
+
+## Test Endpoint Score
+
+```bash
+curl -X POST \
+http://localhost:5000/score \
+-H "Content-Type: application/json" \
+-d '{}'
+```
+
+Jika model aktif:
+
+```json
+{
+  "decision":"Manual Review"
+}
+```
+
+---
+
+# MEMBUAT AI API SEBAGAI SERVICE
+
+Supaya API tidak mati saat logout SSH.
+
+File:
+
+```text
+/etc/systemd/system/ai-api.service
+```
+
+Isi:
+
+```ini
+[Unit]
+Description=AI Scoring API
+
+[Service]
+User=azureuser
+WorkingDirectory=/home/azureuser/soc-project/ai-model
+ExecStart=/usr/bin/python3 app.py
+
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Aktifkan:
+
+```bash
+sudo systemctl daemon-reload
+
+sudo systemctl enable ai-api
+
+sudo systemctl start ai-api
+```
+
+Cek:
+
+```bash
+sudo systemctl status ai-api
+```
+
+---
+
+# DEPLOY SHUFFLE
+
+Masuk ke VM Manager:
+
+```bash
+cd ~/soc-project
 ```
 
 ---
@@ -148,15 +283,7 @@ ssh azureuser@IP_MANAGER
 ## Install Docker
 
 ```bash
-sudo apt update
-
 curl -fsSL https://get.docker.com | sudo bash
-```
-
-Verifikasi:
-
-```bash
-docker --version
 ```
 
 ---
@@ -172,22 +299,42 @@ sudo apt install docker-compose-plugin -y
 ## Clone Shuffle
 
 ```bash
-mkdir -p ~/soc-project/soar
+mkdir soar
 
-cd ~/soc-project/soar
+cd soar
 
 git clone https://github.com/Shuffle/Shuffle.git
 ```
 
-Masuk:
+---
+
+## Menentukan Port Shuffle
+
+Edit file:
 
 ```bash
 cd Shuffle
+
+nano docker-compose.yml
+```
+
+Cari:
+
+```yaml
+ports:
+  - "3001:3001"
+```
+
+Jika bentrok:
+
+```yaml
+ports:
+  - "8080:3001"
 ```
 
 ---
 
-## Jalankan Shuffle
+## Menjalankan Shuffle
 
 ```bash
 docker compose up -d
@@ -201,472 +348,307 @@ docker compose up -d
 docker ps
 ```
 
-Pastikan container Shuffle aktif.
+Pastikan container status:
+
+```text
+Up
+```
 
 ---
 
 ## Akses Dashboard
 
-```text
-http://IP_MANAGER
+Jika menggunakan:
+
+```yaml
+3001:3001
 ```
 
-Buat akun administrator.
+akses:
+
+```text
+http://20.198.176.191:3001
+```
+
+Jangan menggunakan:
+
+```text
+http://20.198.176.191
+```
+
+karena biasanya akan membuka Wazuh Dashboard.
 
 ---
 
-# 6. Integrasi Pipeline AI
-
-Tujuan:
-
-Mengubah model Logistic Regression menjadi REST API yang bisa dipanggil oleh Shuffle.
-
----
-
-# Install Dependency
+# INTEGRASI WAZUH KE SHUFFLE
 
 Masuk:
 
-```bash
-cd ~/soc-project/ai-model
-```
-
-Install:
-
-```bash
-pip install flask
-pip install pandas
-pip install joblib
-pip install scikit-learn
+```text
+Shuffle Dashboard
 ```
 
 ---
 
-# Membuat File app.py
-
-Lokasi:
+## Install Wazuh App
 
 ```text
-/home/azureuser/soc-project/ai-model/app.py
-```
-
-Fungsi:
-
-```text
-Menerima alert JSON Wazuh
+Apps
 ↓
-Menjalankan score_alert.py
+Search
 ↓
-Mengembalikan probabilitas TP
+Wazuh
+↓
+Install
 ```
 
 ---
 
-# Menjalankan API
+## Konfigurasi
 
-```bash
-cd ~/soc-project/ai-model
-
-python3 app.py
-```
-
-Port:
+Host:
 
 ```text
-5000
+https://20.198.176.191:55000
 ```
 
-Test:
+Username:
+
+```text
+wazuh
+```
+
+Password:
+
+```text
+********
+```
+
+---
+
+## Test Connection
+
+Expected:
+
+```text
+Connection Successful
+```
+
+---
+
+# MEMBUAT PLAYBOOK EXECUTOR
+
+Masuk ke VM Frontend.
 
 ```bash
-curl http://localhost:5000/health
+ssh azureuser@20.255.63.52
 ```
 
-Output:
+---
+
+## Folder
+
+```bash
+mkdir -p ~/playbooks
+```
+
+---
+
+## Upload File
+
+```bash
+scp playbook_actions.sh \
+azureuser@20.255.63.52:/home/azureuser/playbooks/
+```
+
+---
+
+## Permission
+
+```bash
+chmod +x ~/playbooks/playbook_actions.sh
+```
+
+---
+
+## Test Manual
+
+Block IP:
+
+```bash
+./playbook_actions.sh ddos_block 1.1.1.1
+```
+
+Lock User:
+
+```bash
+./playbook_actions.sh lock_user testuser
+```
+
+---
+
+# WORKFLOW SHUFFLE
+
+Workflow:
+
+```text
+Alert
+↓
+HTTP Request
+↓
+AI API
+↓
+Decision
+↓
+SSH Action
+```
+
+---
+
+## Node 1
+
+Trigger:
+
+```text
+Wazuh Alert
+```
+
+---
+
+## Node 2
+
+HTTP Request
+
+URL:
+
+```text
+http://20.198.176.191:5000/score
+```
+
+Method:
+
+```text
+POST
+```
+
+Body:
 
 ```json
 {
-  "status":"ok"
+  "$exec.alert"
 }
 ```
 
 ---
 
-# 7. Integrasi Wazuh dan Shuffle
+## Node 3
 
-Masuk ke:
-
-```text
-Shuffle
-```
-
-Install App:
-
-```text
-Wazuh
-```
-
-Isi:
-
-```text
-Host:
-https://IP_MANAGER:55000
-
-Username:
-wazuh
-
-Password:
-*******
-```
-
-Test Connection.
-
-Status:
-
-```text
-Connected
-```
-
----
-
-# 8. Workflow AI Pipeline
-
-Workflow:
-
-```text
-Alert Generated
-        ↓
-Wazuh
-        ↓
-Shuffle
-        ↓
-HTTP Request
-        ↓
-AI Scoring API
-        ↓
-Probability TP
-        ↓
-Decision Node
-        ↓
-Playbook
-```
-
----
-
-# 9. Threshold AI
-
-Gunakan:
-
-```text
-TP Probability >= 0.80
-```
-
-Maka:
-
-```text
-High Confidence
-```
-
----
-
-```text
-0.50 - 0.79
-```
-
-Maka:
-
-```text
-Manual Review
-```
-
----
-
-```text
-< 0.50
-```
-
-Maka:
-
-```text
-Likely False Positive
-```
-
----
-
-# 10. Playbook DDoS
-
-## Trigger
+Decision
 
 Rule:
 
 ```text
-High Traffic
-SYN Flood
-HTTP Flood
+decision == "High Confidence"
 ```
 
 ---
 
-## Workflow
+## Node 4
+
+SSH Command
+
+Host:
 
 ```text
-Alert
- ↓
-AI Score
- ↓
->= 0.80
- ↓
-Block IP
+20.255.63.52
 ```
 
----
-
-## Action
-
-Frontend VM:
+Command:
 
 ```bash
-sudo iptables -A INPUT \
--s ATTACKER_IP \
--j DROP
+/home/azureuser/playbooks/playbook_actions.sh ddos_block 20.6.131.20
 ```
 
 ---
 
-## Expected Result
+# BENCHMARKING
 
-```text
-Traffic attacker berhenti
-```
+## Sebelum AI
 
----
-
-# 11. Playbook Malware
-
-## Trigger
-
-```text
-Malware Detection
-EICAR Detection
-Suspicious File
-```
-
----
-
-## Workflow
-
-```text
-Alert
- ↓
-AI Score
- ↓
->= 0.80
- ↓
-Isolate Host
-```
-
----
-
-## Action
-
-Frontend VM:
-
-```bash
-sudo iptables -P INPUT DROP
-
-sudo iptables -P OUTPUT DROP
-```
-
----
-
-## Expected Result
-
-```text
-Host terisolasi
-```
-
----
-
-# 12. Playbook Credential Abuse
-
-## Trigger
-
-```text
-Multiple Failed Login
-Bruteforce Login
-Credential Abuse
-```
-
----
-
-## Workflow
-
-```text
-Alert
- ↓
-AI Score
- ↓
->= 0.80
- ↓
-Lock User
-```
-
----
-
-## Action
-
-```bash
-sudo passwd -l victim
-```
-
----
-
-## Expected Result
-
-```text
-Akun terkunci
-```
-
----
-
-# 13. Pengujian End-to-End
-
-Minta Anggota 1 melakukan ulang:
-
-```text
-DDoS Simulation
-Malware Simulation
-Credential Abuse Simulation
-```
-
-Saat:
-
-```text
-AI + SOAR aktif
-```
-
----
-
-# 14. Benchmark Sebelum AI
-
-Kondisi:
+Matikan AI API dan Shuffle.
 
 ```text
 Wazuh Only
 ```
 
-Catat:
-
-| Metric         | Value |
-| -------------- | ----- |
-| Total Alert    |       |
-| True Positive  |       |
-| False Positive |       |
-| Precision      |       |
-| Recall         |       |
-| MTTR           |       |
-
----
-
-# 15. Benchmark Sesudah AI
-
-Kondisi:
+Lakukan:
 
 ```text
-Wazuh + AI + SOAR
+DDoS
+Malware
+Credential Abuse
 ```
 
 Catat:
 
-| Metric         | Value |
-| -------------- | ----- |
-| Total Alert    |       |
-| True Positive  |       |
-| False Positive |       |
-| Precision      |       |
-| Recall         |       |
-| MTTR           |       |
+```text
+Jumlah Alert
+Jumlah False Positive
+Waktu Respon
+```
 
----
-
-# 16. Perhitungan
-
-## Precision
+Simpan:
 
 ```text
-TP / (TP + FP)
+benchmark/before_ai.xlsx
 ```
 
 ---
 
-## Recall
+## Sesudah AI
+
+Aktifkan:
 
 ```text
-TP / (TP + FN)
+AI API
+Shuffle
+```
+
+Ulangi skenario yang sama.
+
+Catat:
+
+```text
+Jumlah Alert Diteruskan
+Jumlah False Positive
+Waktu Respon
+```
+
+Simpan:
+
+```text
+benchmark/after_ai.xlsx
 ```
 
 ---
 
-## F1 Score
+# HASIL YANG DIHARAPKAN
 
-```text
-2 × Precision × Recall
-----------------------
- Precision + Recall
-```
+| Metric         | Before | After |
+| -------------- | ------ | ----- |
+| Total Alert    |        |       |
+| False Positive |        |       |
+| Precision      |        |       |
+| Recall         |        |       |
+| F1 Score       |        |       |
+| MTTR           |        |       |
 
----
+Kesimpulan:
 
-## MTTR
-
-```text
-Total Response Time
--------------------
-Jumlah Insiden
-```
-
----
-
-# 17. Output yang Dikumpulkan
-
-## Screenshot
-
-```text
-Shuffle Dashboard
-Workflow AI
-Workflow DDoS
-Workflow Malware
-Workflow Credential Abuse
-AI API Running
-Benchmark Results
-```
-
----
-
-## File
-
-```text
-workflow-ddos.json
-workflow-malware.json
-workflow-login-abuse.json
-
-alert_tp_fp_model.joblib
-
-metrics.json
-
-comparison.xlsx
-```
-
----
-
-# 18. Kesimpulan yang Diharapkan
-
-1. False Positive turun signifikan.
-2. Precision meningkat.
-3. Recall tetap tinggi.
-4. Jumlah alert yang perlu ditinjau manusia berkurang.
-5. MTTR menurun karena respons otomatis.
-6. AI berhasil menjadi lapisan penyaring sebelum SOAR dijalankan.
+1. False Positive berkurang.
+2. Alert yang masuk ke analis lebih sedikit.
+3. Respon insiden lebih cepat.
+4. AI berhasil menjadi filter sebelum SOAR menjalankan playbook.
 
 ```
 ```
