@@ -1,79 +1,80 @@
-# PERBAIKAN DAN PENAMBAHAN DOKUMENTASI ANGGOTA 4
+# ANGGOTA 4
 
-## Struktur Final VM
+# SOAR Integration, AI Pipeline, Playbook Response, dan Benchmarking
 
-### VM-1 : wazuh-manager
+## Project
 
-IP:
+Reducing SOC False Alarms Through Human-AI Collaboration
 
-```text
-20.198.176.191
-```
+---
 
-Service:
+# 1. Tujuan Anggota 4
+
+Mengintegrasikan model Machine Learning hasil pekerjaan Anggota 3 ke dalam sistem SOAR sehingga:
+
+1. Alert Wazuh dianalisis terlebih dahulu oleh AI.
+2. Alert dengan probabilitas True Positive tinggi diteruskan ke workflow respons.
+3. Alert dengan probabilitas False Positive tinggi diturunkan prioritasnya.
+4. Workflow respons dapat berjalan otomatis.
+5. Performa sebelum dan sesudah AI dapat dibandingkan.
+
+---
+
+# 2. Infrastruktur
+
+## VM-1 : wazuh-manager
+
+Fungsi:
 
 ```text
 Wazuh Manager
 Wazuh Dashboard
 Wazuh API
-Shuffle SOAR
 AI Scoring API
+Local SOAR Engine
 ```
-
-Folder:
-
-```text
-/home/azureuser/soc-project
-
-├── ai-model
-│   ├── artifacts
-│   ├── src
-│   ├── score_alert.py
-│   └── app.py
-│
-├── soar
-│   └── Shuffle
-│
-└── benchmark
-```
-
----
-
-### VM-2 : wazuh-agent-fe
 
 IP:
 
 ```text
-20.255.63.52
+IP_MANAGER
 ```
 
-Service:
+Direktori kerja:
+
+```text
+/home/azureuser/soc-project
+```
+
+---
+
+## VM-2 : wazuh-agent-fe
+
+Fungsi:
 
 ```text
 Frontend Application
 Wazuh Agent
-Playbook Executor
+Target Response
 ```
-
-Folder:
-
-```text
-/home/azureuser/playbooks
-
-└── playbook_actions.sh
-```
-
----
-
-### VM-3 : wazuh-agent-attacker
 
 IP:
 
 ```text
-20.6.131.20
+IP_FRONTEND
 ```
 
-Service:
+Direktori:
+
+```text
+/home/azureuser/playbooks
+```
+
+---
+
+## VM-3 : wazuh-agent-attack
+
+Fungsi:
 
 ```text
 Attack Simulation
@@ -89,73 +90,81 @@ GoPhish
 
 ---
 
-# PERSIAPAN PORT
+# 3. Struktur Folder
 
-Sebelum install Shuffle dan AI API:
-
-```bash
-sudo ss -tulpn
-```
-
-Catat port yang sudah digunakan.
-
-Biasanya:
+## VM Manager
 
 ```text
-443     Wazuh Dashboard
-55000   Wazuh API
-```
+/home/azureuser/soc-project
 
-Pastikan:
-
-```text
-5000
-3001
-```
-
-belum digunakan.
-
----
-
-# DEPLOY AI SCORING API
-
-Masuk ke VM Manager:
-
-```bash
-ssh azureuser@20.198.176.191
+├── ai-model
+│
+│   ├── app.py
+│   ├── score_alert.py
+│   │
+│   ├── artifacts
+│   │   ├── alert_tp_fp_model.joblib
+│   │   ├── metrics.json
+│   │   └── top_features.json
+│   │
+│   └── src
+│
+├── local-soar
+│
+│   ├── soar_engine.py
+│   ├── config.json
+│   ├── sample_alert.json
+│   └── logs
+│
+└── benchmark
 ```
 
 ---
 
-## Membuat Folder AI
+## VM Frontend
 
-```bash
-mkdir -p ~/soc-project/ai-model
+```text
+/home/azureuser/playbooks
+
+└── playbook_actions.sh
 ```
 
 ---
 
-## Upload Artifact
+# 4. Setup AI Scoring API
 
-Dari laptop:
-
-```bash
-scp -r ai-model \
-azureuser@20.198.176.191:/home/azureuser/soc-project/
-```
-
-Verifikasi:
-
-```bash
-ls ~/soc-project/ai-model/artifacts
-```
-
-Harus muncul:
+Lokasi:
 
 ```text
-alert_tp_fp_model.joblib
-metrics.json
-top_features.json
+VM-1 (wazuh-manager)
+```
+
+Masuk:
+
+```bash
+ssh azureuser@IP_MANAGER
+```
+
+---
+
+## Masuk Folder AI
+
+```bash
+cd ~/soc-project/ai-model
+```
+
+---
+
+## Membuat Virtual Environment
+
+```bash
+python3 -m venv venv
+```
+
+Aktifkan:
+
+```bash
+source venv/bin/activate
 ```
 
 ---
@@ -163,11 +172,16 @@ top_features.json
 ## Install Dependency
 
 ```bash
-sudo apt update
+pip install flask
+pip install pandas
+pip install joblib
+pip install scikit-learn
+```
 
-sudo apt install python3-pip -y
+atau:
 
-pip3 install flask pandas scikit-learn joblib
+```bash
+pip install -r requirements.txt
 ```
 
 ---
@@ -175,28 +189,24 @@ pip3 install flask pandas scikit-learn joblib
 ## Menjalankan API
 
 ```bash
-cd ~/soc-project/ai-model
-
-python3 app.py
+python app.py
 ```
 
-Output:
+Port:
 
 ```text
-Running on http://0.0.0.0:5000
+5000
 ```
 
 ---
 
 ## Test API
 
-Health Check:
-
 ```bash
 curl http://localhost:5000/health
 ```
 
-Expected:
+Output:
 
 ```json
 {
@@ -206,28 +216,7 @@ Expected:
 
 ---
 
-## Test Endpoint Score
-
-```bash
-curl -X POST \
-http://localhost:5000/score \
--H "Content-Type: application/json" \
--d '{}'
-```
-
-Jika model aktif:
-
-```json
-{
-  "decision":"Manual Review"
-}
-```
-
----
-
-# MEMBUAT AI API SEBAGAI SERVICE
-
-Supaya API tidak mati saat logout SSH.
+# 5. Menjadikan AI API Sebagai Service
 
 File:
 
@@ -240,11 +229,13 @@ Isi:
 ```ini
 [Unit]
 Description=AI Scoring API
+After=network.target
 
 [Service]
 User=azureuser
 WorkingDirectory=/home/azureuser/soc-project/ai-model
-ExecStart=/usr/bin/python3 app.py
+
+ExecStart=/home/azureuser/soc-project/ai-model/venv/bin/python /home/azureuser/soc-project/ai-model/app.py
 
 Restart=always
 
@@ -252,13 +243,23 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-Aktifkan:
+---
+
+Reload:
 
 ```bash
 sudo systemctl daemon-reload
+```
 
+Enable:
+
+```bash
 sudo systemctl enable ai-api
+```
 
+Start:
+
+```bash
 sudo systemctl start ai-api
 ```
 
@@ -270,200 +271,139 @@ sudo systemctl status ai-api
 
 ---
 
-# DEPLOY SHUFFLE
+# 6. Setup Local SOAR Engine
 
-Masuk ke VM Manager:
-
-```bash
-cd ~/soc-project
-```
-
----
-
-## Install Docker
-
-```bash
-curl -fsSL https://get.docker.com | sudo bash
-```
-
----
-
-## Install Docker Compose
-
-```bash
-sudo apt install docker-compose-plugin -y
-```
-
----
-
-## Clone Shuffle
-
-```bash
-mkdir soar
-
-cd soar
-
-git clone https://github.com/Shuffle/Shuffle.git
-```
-
----
-
-## Menentukan Port Shuffle
-
-Edit file:
-
-```bash
-cd Shuffle
-
-nano docker-compose.yml
-```
-
-Cari:
-
-```yaml
-ports:
-  - "3001:3001"
-```
-
-Jika bentrok:
-
-```yaml
-ports:
-  - "8080:3001"
-```
-
----
-
-## Menjalankan Shuffle
-
-```bash
-docker compose up -d
-```
-
----
-
-## Verifikasi
-
-```bash
-docker ps
-```
-
-Pastikan container status:
+Lokasi:
 
 ```text
-Up
+VM-1 (wazuh-manager)
 ```
 
 ---
 
-## Akses Dashboard
+## Membuat Folder
 
-Jika menggunakan:
-
-```yaml
-3001:3001
+```bash
+mkdir -p ~/soc-project/local-soar
 ```
-
-akses:
-
-```text
-http://20.198.176.191:3001
-```
-
-Jangan menggunakan:
-
-```text
-http://20.198.176.191
-```
-
-karena biasanya akan membuka Wazuh Dashboard.
-
----
-
-# INTEGRASI WAZUH KE SHUFFLE
 
 Masuk:
 
-```text
-Shuffle Dashboard
+```bash
+cd ~/soc-project/local-soar
 ```
 
 ---
 
-## Install Wazuh App
+## File Config
+
+Lokasi:
 
 ```text
-Apps
-↓
-Search
-↓
-Wazuh
-↓
-Install
+/home/azureuser/soc-project/local-soar/config.json
+```
+
+Isi:
+
+```json
+{
+    "frontend_vm":"IP_FRONTEND",
+    "frontend_user":"azureuser",
+    "playbook_path":"/home/azureuser/playbooks/playbook_actions.sh"
+}
 ```
 
 ---
 
-## Konfigurasi
+# 7. Setup SSH Tanpa Password
 
-Host:
-
-```text
-https://20.198.176.191:55000
-```
-
-Username:
+Dilakukan dari:
 
 ```text
-wazuh
+VM Manager
 ```
 
-Password:
-
-```text
-********
-```
-
----
-
-## Test Connection
-
-Expected:
-
-```text
-Connection Successful
-```
-
----
-
-# MEMBUAT PLAYBOOK EXECUTOR
-
-Masuk ke VM Frontend.
+Generate:
 
 ```bash
-ssh azureuser@20.255.63.52
+ssh-keygen
+```
+
+Enter semua.
+
+---
+
+Copy key:
+
+```bash
+ssh-copy-id azureuser@IP_FRONTEND
 ```
 
 ---
 
-## Folder
+Test:
+
+```bash
+ssh azureuser@IP_FRONTEND
+```
+
+Jika tidak meminta password berarti berhasil.
+
+---
+
+# 8. Membuat Playbook Response
+
+Lokasi:
+
+```text
+VM Frontend
+```
+
+Folder:
 
 ```bash
 mkdir -p ~/playbooks
 ```
 
----
+File:
 
-## Upload File
-
-```bash
-scp playbook_actions.sh \
-azureuser@20.255.63.52:/home/azureuser/playbooks/
+```text
+/home/azureuser/playbooks/playbook_actions.sh
 ```
 
----
+Isi:
 
-## Permission
+```bash
+#!/bin/bash
+
+ACTION=$1
+TARGET=$2
+
+case "$ACTION" in
+
+ddos_block)
+
+sudo iptables -A INPUT -s "$TARGET" -j DROP
+;;
+
+malware_isolate)
+
+sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+sudo iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT
+
+sudo iptables -P INPUT DROP
+sudo iptables -P OUTPUT DROP
+;;
+
+lock_user)
+
+sudo passwd -l "$TARGET"
+;;
+
+esac
+```
+
+Permission:
 
 ```bash
 chmod +x ~/playbooks/playbook_actions.sh
@@ -471,184 +411,336 @@ chmod +x ~/playbooks/playbook_actions.sh
 
 ---
 
-## Test Manual
+# 9. Membuat SOAR Engine
 
-Block IP:
-
-```bash
-./playbook_actions.sh ddos_block 1.1.1.1
-```
-
-Lock User:
-
-```bash
-./playbook_actions.sh lock_user testuser
-```
-
----
-
-# WORKFLOW SHUFFLE
-
-Workflow:
+Lokasi:
 
 ```text
-Alert
+VM Manager
+```
+
+File:
+
+```text
+/home/azureuser/soc-project/local-soar/soar_engine.py
+```
+
+Fungsi:
+
+```text
+Menerima Alert
 ↓
-HTTP Request
+Kirim ke AI API
 ↓
-AI API
+Menerima Probabilitas
 ↓
-Decision
+Menentukan Response
 ↓
-SSH Action
+Menjalankan Playbook
 ```
 
 ---
 
-## Node 1
-
-Trigger:
+# Workflow
 
 ```text
 Wazuh Alert
+      ↓
+AI API
+      ↓
+Decision Engine
+      ↓
+Playbook
+      ↓
+Response
 ```
 
 ---
 
-## Node 2
+# 10. Threshold AI
 
-HTTP Request
-
-URL:
+## High Confidence
 
 ```text
-http://20.198.176.191:5000/score
+Probability >= 0.80
 ```
 
-Method:
+Action:
 
 ```text
-POST
-```
-
-Body:
-
-```json
-{
-  "$exec.alert"
-}
+Auto Response
 ```
 
 ---
 
-## Node 3
-
-Decision
-
-Rule:
+## Manual Review
 
 ```text
-decision == "High Confidence"
+0.50 - 0.79
+```
+
+Action:
+
+```text
+SOC Analyst Review
 ```
 
 ---
 
-## Node 4
-
-SSH Command
-
-Host:
+## Likely False Positive
 
 ```text
-20.255.63.52
+< 0.50
 ```
 
-Command:
+Action:
+
+```text
+No Automatic Action
+```
+
+---
+
+# 11. Mapping Alert ke Response
+
+| Alert | Response |
+|---------|---------|
+| DDoS | Block Source IP |
+| Malware | Isolate Host |
+| Brute Force | Lock User |
+
+---
+
+# 12. DDoS Playbook
+
+## Simulasi
+
+VM Attacker:
 
 ```bash
-/home/azureuser/playbooks/playbook_actions.sh ddos_block 20.6.131.20
+sudo hping3 -S -p 80 --flood IP_FRONTEND
 ```
 
 ---
 
-# BENCHMARKING
+Response:
 
-## Sebelum AI
+```bash
+iptables -A INPUT -s ATTACKER_IP -j DROP
+```
 
-Matikan AI API dan Shuffle.
+---
+
+Verifikasi:
+
+```bash
+sudo iptables -L
+```
+
+---
+
+# 13. Malware Playbook
+
+Simulasi:
+
+```bash
+curl -O https://secure.eicar.org/eicar.com.txt
+```
+
+---
+
+Response:
+
+```bash
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+```
+
+---
+
+Verifikasi:
+
+```bash
+ping google.com
+```
+
+Harus gagal.
+
+---
+
+# 14. Credential Abuse Playbook
+
+Simulasi:
+
+```bash
+hydra
+```
+
+atau
+
+```bash
+multiple ssh login failure
+```
+
+---
+
+Response:
+
+```bash
+passwd -l victim
+```
+
+---
+
+Verifikasi:
+
+```bash
+sudo passwd -S victim
+```
+
+---
+
+# 15. Integrasi dengan Wazuh
+
+Metode paling sederhana:
+
+```text
+Wazuh Alert JSON
+↓
+Export Alert
+↓
+SOAR Engine
+↓
+AI API
+↓
+Response
+```
+
+Alert yang diterima Wazuh akan diproses oleh:
+
+```text
+/home/azureuser/soc-project/local-soar/soar_engine.py
+```
+
+---
+
+# 16. Benchmark Sebelum AI
+
+Kondisi:
 
 ```text
 Wazuh Only
 ```
 
-Lakukan:
+Catat:
+
+| Metric | Value |
+|----------|----------|
+| Total Alert | |
+| True Positive | |
+| False Positive | |
+| Precision | |
+| Recall | |
+| F1 Score | |
+| MTTR | |
+
+---
+
+# 17. Benchmark Sesudah AI
+
+Kondisi:
 
 ```text
-DDoS
-Malware
-Credential Abuse
+Wazuh + AI + Local SOAR
 ```
 
 Catat:
 
-```text
-Jumlah Alert
-Jumlah False Positive
-Waktu Respon
-```
+| Metric | Value |
+|----------|----------|
+| Total Alert | |
+| True Positive | |
+| False Positive | |
+| Precision | |
+| Recall | |
+| F1 Score | |
+| MTTR | |
 
-Simpan:
+---
+
+# 18. Rumus
+
+## Precision
 
 ```text
-benchmark/before_ai.xlsx
+TP / (TP + FP)
 ```
 
 ---
 
-## Sesudah AI
-
-Aktifkan:
+## Recall
 
 ```text
-AI API
-Shuffle
-```
-
-Ulangi skenario yang sama.
-
-Catat:
-
-```text
-Jumlah Alert Diteruskan
-Jumlah False Positive
-Waktu Respon
-```
-
-Simpan:
-
-```text
-benchmark/after_ai.xlsx
+TP / (TP + FN)
 ```
 
 ---
 
-# HASIL YANG DIHARAPKAN
+## F1 Score
 
-| Metric         | Before | After |
-| -------------- | ------ | ----- |
-| Total Alert    |        |       |
-| False Positive |        |       |
-| Precision      |        |       |
-| Recall         |        |       |
-| F1 Score       |        |       |
-| MTTR           |        |       |
-
-Kesimpulan:
-
-1. False Positive berkurang.
-2. Alert yang masuk ke analis lebih sedikit.
-3. Respon insiden lebih cepat.
-4. AI berhasil menjadi filter sebelum SOAR menjalankan playbook.
-
+```text
+2 × Precision × Recall
+-----------------------
+Precision + Recall
 ```
+
+---
+
+## MTTR
+
+```text
+Total Response Time
+-------------------
+Jumlah Insiden
 ```
+
+---
+
+# 19. Output yang Dikumpulkan
+
+Screenshot:
+
+```text
+AI API Running
+SOAR Engine Running
+DDoS Response
+Malware Response
+Credential Abuse Response
+Benchmark Result
+```
+
+---
+
+File:
+
+```text
+app.py
+soar_engine.py
+playbook_actions.sh
+
+alert_tp_fp_model.joblib
+metrics.json
+
+benchmark.xlsx
+```
+
+---
+
+# 20. Kesimpulan
+
+1. False Positive berhasil dikurangi menggunakan AI Classifier.
+2. Precision meningkat setelah filtering AI.
+3. Jumlah alert yang masuk ke analyst berkurang.
+4. MTTR menurun karena response otomatis.
+5. Sistem SOAR berhasil diimplementasikan menggunakan Local SOAR Engine berbasis Python tanpa memerlukan platform SOAR eksternal.
+6. Arsitektur lebih ringan dan sesuai dengan resource VM yang tersedia.
