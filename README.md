@@ -119,12 +119,12 @@ Sistem ini beroperasi di level **Semi-Autonomous (HOtL — Human-on-the-Loop)**:
                                         │
                                         ▼
                              Attacker Blocked
-`
+```
 
 ### Infrastruktur Keseluruhan
 
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           MICROSOFT AZURE                                   │
 │                       Resource Group: SOC-Project                           │
@@ -178,7 +178,7 @@ Sistem ini beroperasi di level **Semi-Autonomous (HOtL — Human-on-the-Loop)**:
 
 ### Alur Data Per Skenario
 
-```
+```text
 MALWARE
   webapp-agent: File ditambahkan ke /uploads/
         ↓ FIM realtime (check_all=yes → hitung MD5)
