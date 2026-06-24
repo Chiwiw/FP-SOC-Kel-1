@@ -37,6 +37,93 @@ Sistem ini beroperasi di level **Semi-Autonomous (HOtL — Human-on-the-Loop)**:
 
 ## 2. Arsitektur Sistem
 
+### Arsitektur AI-Driven SOAR
+
+`	ext
+                    ┌──────────────────────┐
+                    │   Attacker VM        │
+                    │  (DDoS Simulation)   │
+                    └──────────┬───────────┘
+                               │
+                               │ HTTP Flood
+                               ▼
+                    ┌──────────────────────┐
+                    │   Frontend VM        │
+                    │  NodeJS Web Server   │
+                    │  Port 3000           │
+                    └──────────┬───────────┘
+                               │
+                               │ access.log
+                               ▼
+                    ┌──────────────────────┐
+                    │   Wazuh Agent        │
+                    │ (Web Server Agent)   │
+                    └──────────┬───────────┘
+                               │
+                               │ Log Forwarding
+                               ▼
+                    ┌──────────────────────┐
+                    │   Wazuh Manager      │
+                    │ Detection Engine     │
+                    └──────────┬───────────┘
+                               │
+                               │ local_rules.xml
+                               ▼
+                    ┌──────────────────────┐
+                    │ Custom Rule 100004   │
+                    │ HTTP Flood Detection │
+                    └──────────┬───────────┘
+                               │
+                               │ Alert Generated
+                               ▼
+                    ┌──────────────────────┐
+                    │ alerts.json          │
+                    │ Wazuh Alert Storage  │
+                    └──────────┬───────────┘
+                               │
+                               │ Real-Time Monitoring
+                               ▼
+                    ┌──────────────────────┐
+                    │ SOAR Engine          │
+                    │ soar_engine.py       │
+                    └──────────┬───────────┘
+                               │
+                               │ JSON Alert
+                               ▼
+                    ┌──────────────────────┐
+                    │ AI Scoring API       │
+                    │ Flask + RandomForest │
+                    └──────────┬───────────┘
+                               │
+                   ┌───────────┴───────────┐
+                   │                       │
+                   ▼                       ▼
+
+       Likely False Positive       High Confidence
+                │                        │
+                │                        │
+                ▼                        ▼
+
+        Manual Review          ┌─────────────────┐
+                               │ Playbook Engine │
+                               └────────┬────────┘
+                                        │
+                                        ▼
+                            playbook_actions.sh
+                                        │
+                                        ▼
+                             SSH to Frontend VM
+                                        │
+                                        ▼
+                           sudo ufw deny <srcip>
+                                        │
+                                        ▼
+                             Attacker Blocked
+`
+
+### Infrastruktur Keseluruhan
+
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           MICROSOFT AZURE                                   │
@@ -168,9 +255,7 @@ FP-SOC-Kel-1/
 │   ├── app.py                       ← Flask API wrapper untuk model AI
 │   ├── soar_engine.py               ← Engine routing alert → playbook
 │   ├── playbook_actions.sh          ← Aksi respons otomatis (bash)
-│   ├── setup_soar.sh                ← Setup script dependensi
-│   ├── workflow_anggota4.md         ← Dokumentasi alur kerja SOAR
-│   └── simple_alert.json            ← Contoh format alert untuk testing
+│   └── workflow_anggota4.md         ← Dokumentasi alur kerja SOAR
 │
 └── docs/
     ├── handover-anggota1-ke-anggota2.md
@@ -184,10 +269,10 @@ FP-SOC-Kel-1/
 
 | Anggota | Peran | Deliverable |
 |---|---|---|
-| **Anggota 1** | Infrastruktur & Skenario Serangan | 4 VM Azure, 3 skenario serangan, raw dataset JSON, konfigurasi Wazuh |
-| **Anggota 2** | Analisis Data & Labeling | `final_dataset.csv`, 3 CSV per skenario, kriteria false alarm |
-| **Anggota 3** | AI/ML Developer | Model terlatih, pipeline scoring, metrics & feature analysis |
-| **Anggota 4** | SOAR & Integrasi Otomasi | Flask API, SOAR engine, playbook bash, dokumentasi benchmark |
+| **Evan Christian Nainggolan** | Infrastruktur & Skenario Serangan | 4 VM Azure, 3 skenario serangan, raw dataset JSON, konfigurasi Wazuh |
+| **Hanif Mawla Faizi** | Analisis Data & Labeling | `final_dataset.csv`, 3 CSV per skenario, kriteria false alarm |
+| **Yasykur Khalis Jati Maulana** | AI/ML Developer | Model terlatih, pipeline scoring, metrics & feature analysis |
+| **Rizqi Akbar Sukirman Putra** | SOAR & Integrasi Otomasi | Flask API, SOAR engine, playbook bash, dokumentasi benchmark |
 
 ---
 
@@ -447,44 +532,81 @@ decision = "Likely False Positive" (prob < 0.50)
 
 ---
 
-## 11. Hasil Benchmark
+## 11. Hasil Benchmark & Evaluasi
 
-### Sebelum AI (Wazuh Only)
-
-Semua alert diteruskan langsung ke analis tanpa penyaringan.
-
-| Metrik | Nilai |
-|---|---|
-| Total Alert ke Analis | 24.154 |
-| True Positive | 700 |
-| False Positive | 23.454 |
-| Precision | 2.90% |
-| Recall | 100% |
-| Beban Analis | Sangat tinggi — 97.1% alert adalah noise |
-
-### Sesudah AI + SOAR
-
-Model AI menyaring alert sebelum sampai ke analis.
-
-| Metrik | Nilai |
-|---|---|
-| Model Accuracy | 99.98% |
-| Model Precision | 99.29% |
-| Model Recall | 100% |
-| Model F1-Score | 99.64% |
-| FP yang Salah Lolos | 1 dari 4.691 FP di test set |
-| TP yang Terlewat | 0 dari 140 TP di test set |
-| **Estimasi FP Reduction** | **~99.98%** |
-
-### Ringkasan Perbandingan
-
-| | Sebelum AI | Sesudah AI |
-|---|---|---|
+### Tabel 1. Perbandingan Performa Deteksi
+| Metric | Wazuh Only | AI + SOAR |
+|---|---:|---:|
+| Total Alert | 24,154 | 24,154 |
+| True Positive (TP) | 700 | 700 |
+| False Positive (FP) | 23,454 | ~5 |
+| False Negative (FN) | 0 | 0 |
+| Accuracy | N/A | 99.98% |
 | Precision | 2.90% | 99.29% |
 | Recall | 100% | 100% |
-| Alert yang perlu diperiksa analis | 24.154 | ~705 (hanya TP + 5 FP lolos) |
-| Respons otomatis | Tidak ada | Ya (High Confidence) |
-| Beban kerja analis | Sangat tinggi | Minimal |
+| F1-Score | 5.64% | 99.64% |
+
+### Tabel 2. Perbandingan Beban Kerja Analis
+| Parameter | Sebelum AI | Sesudah AI |
+|---|---:|---:|
+| Total Alert Masuk | 24,154 | 24,154 |
+| Alert yang Harus Dicek Manual | 24,154 | ~705 |
+| Alert Noise (False Positive) | 23,454 | ~5 |
+| Persentase Noise | 97.10% | 0.71% |
+| Pengurangan Beban Kerja | - | 97.08% |
+
+*(Estimasi alert yang perlu diperiksa analis: 700 TP + 5 FP ≈ 705 alert)*
+
+### Tabel 3. Hasil Evaluasi Model AI
+| Metric | Nilai |
+|---|---:|
+| Accuracy | 99.98% |
+| Precision | 99.29% |
+| Recall | 100% |
+| F1-Score | 99.64% |
+| False Positive yang Lolos | 1 dari 4,691 |
+| False Negative | 0 dari 140 |
+| False Positive Reduction | 99.98% |
+
+### Tabel 4. Benchmark Sistem AI + SOAR
+![Benchmark Sistem](img/benchmark.png)
+
+| Parameter | Nilai |
+|---|---:|
+| Rata-rata AI Inference Time | 31 ms |
+| Rata-rata Keputusan AI | 0.031 detik |
+| Rata-rata Eksekusi Playbook | 7 - 10 detik |
+| Rata-rata End-to-End Response| 8.5 detik |
+| Mitigasi | Otomatis |
+
+### Tabel 5. Contoh Benchmark Aktual
+![SOAR and Benchmark](img/SOARnBenchmark.png)
+
+| Alert ID | Rule ID | Decision | AI Time (s) | Total Time (s) |
+|---|---|---|---:|---:|
+| 1782298969.12582573 | 5503 | Likely False Positive | 0.0321 | 0.0322 |
+| 1782298975.12584277 | 5503 | Likely False Positive | 0.0312 | 0.0313 |
+| 1782299015.12585368 | 5503 | Likely False Positive | 0.0315 | 0.0316 |
+| 1782299017.12587002 | 5503 | Likely False Positive | 0.0324 | 0.0324 |
+| 1782299017.12596892 | 100004 | High Confidence | 0.0301 | 9.5042 |
+| 1782299138.13368896 | 100004 | High Confidence | 0.0322 | 7.4205 |
+
+### Tabel 6. Ringkasan Hasil Penelitian
+| Aspek | Wazuh Only | AI + SOAR |
+|---|---|---|
+| Deteksi Serangan | Ya | Ya |
+| Penyaringan False Positive | Tidak | Ya |
+| Precision | 2.90% | 99.29% |
+| Recall | 100% | 100% |
+| F1-Score | 5.64% | 99.64% |
+| Mitigasi Otomatis | Tidak | Ya |
+| Waktu Respons | Bergantung Analis | ± 8.5 detik |
+| Alert ke Analis | 24,154 | ~705 |
+| False Positive Reduction | 0% | 99.98% |
+| Beban Kerja Analis | Sangat Tinggi | Rendah |
+
+### Kesimpulan
+Implementasi AI dan SOAR berhasil meningkatkan precision deteksi dari 2.90% menjadi 99.29% tanpa menurunkan recall yang tetap berada pada 100%. Model mampu mengurangi false positive sebesar 99.98%, sehingga jumlah alert yang harus dianalisis secara manual berkurang dari 24,154 alert menjadi sekitar 705 alert. Selain itu, sistem SOAR mampu melakukan mitigasi otomatis dengan rata-rata waktu respons end-to-end sebesar 8.5 detik sejak alert diterima hingga playbook dijalankan.
 
 ---
 
