@@ -39,7 +39,7 @@ Sistem ini beroperasi di level **Semi-Autonomous (HOtL — Human-on-the-Loop)**:
 
 ### Arsitektur AI-Driven SOAR
 
-`	ext
+```text
                     ┌──────────────────────┐
                     │   Attacker VM        │
                     │  (DDoS Simulation)   │
